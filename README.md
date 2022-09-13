@@ -11,7 +11,7 @@ Install Pandas:
 USAGE:
 ```
 webscrape.py [options]
- 
+
 Required Options
      -c --city       city to search from i.e. Boston...
                      must put in quotes if city is multi word i.e. "New Bedford"
@@ -20,7 +20,7 @@ Required Options
      -b --bands      bands to search valid values are 29, 50, 144, 222, 440, 902, 1296
                          must not have any spaces between commas when passing the option
                          i.e. 144,222,440 i.e. 144,440,1296
- 
+
 Optional:
      -o --outputfile name of csv file to write i.e. -o repeaters.csv
                          if not outputfile is selected writes to repeaters.csv
@@ -28,4 +28,6 @@ Optional:
                          valid modes are fm ysf dmr dstar nxdn p25
                          i.e. -f ysf,dmr i.e. nxdn,p2f,dstar, etc
                          if no filter is selected the default is to print all repeaters in radius
+     -p --chirp      Prints an additional csv file that is CHIRP format. The CHIRP file has
+                         CHIRP_ added to the beginning of the file name. i.e. CHIRP_repeaters.csv
 ```
