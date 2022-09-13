@@ -25,6 +25,9 @@ def helpmessage(exit_code):
    print ('                         valid modes are fm ysf dmr dstar nxdn p25')
    print ('                         i.e. -f ysf,dmr i.e. nxdn,p2f,dstar, etc')
    print ('                         if no filter is selected the default is to print all repeaters in radius')
+   print ('     -p --chirp      Prints an additional csv file that is CHIRP format. The CHIRP file has')
+   print ('                         CHIRP_ added to the beginning of the file name. i.e. CHIRP_repeaters.csv')
+
    sys.exit(exit_code)
 
 def updatewebformdata(formdata, city,state,radius,bands):
@@ -183,8 +186,8 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
             chirprepeater.append("FM")
             chirprepeater.append("5.00")
             chirprepeater.append("")
-            chirprepeater.append("")
             chirprepeater.append(city + " " + state)
+            chirprepeater.append("")
             chirprepeater.append("")
             chirprepeater.append("")
             chirprepeater.append("")
@@ -269,7 +272,7 @@ def determineoffset(freq_string):
         return {'offset': offset, 'offset_dir': offset_dir}
 
     # If not in list return 0
-    return {'offset': 0, 'offset_dir': " "}
+    return {'offset': 0, 'offset_dir': "off"}
 
 def filteroutput(rfilter, repeater, repeater_list):
     #print (rfilter)
