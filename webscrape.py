@@ -25,8 +25,14 @@ def helpmessage(exit_code):
    print ('                         valid modes are fm ysf dmr dstar nxdn p25')
    print ('                         i.e. -f ysf,dmr i.e. nxdn,p2f,dstar, etc')
    print ('                         if no filter is selected the default is to print all repeaters in radius')
-   print ('     -p --chirp      Prints an additional csv file that is CHIRP format. The CHIRP file has')
+   print ('     -p --chirp      prints an additional csv file that is CHIRP format The CHIRP file has')
    print ('                         CHIRP_ added to the beginning of the file name. i.e. CHIRP_repeaters.csv')
+   print ('                         chirp option works with FM analog repeaters ONLY')
+   print ('     -z --search     search each repeater entry for the indicated text and only print matches, case sensitive ')
+   print ('                         this feature is particularly useful when searching for linked networks using the notes,')
+   print ('                         callsign, sponsor, etc. *** Chirp output only contains a subset of data and results')
+   print ('                         will differ from the primary repeater csv data file')
+   print ('                         i.e. -z "NB1RI"')
 
    sys.exit(exit_code)
 
@@ -41,7 +47,7 @@ def updatewebformdata(formdata, city,state,radius,bands):
                    }
     formdata.update(formupdate)
 
-def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist):
+def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist, searchfilter):
     # Remove Header from list
     rpters.pop(0)
 
@@ -141,7 +147,7 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
         repeater.append(city)
         repeater.append(state)
         repeater.append(freq)
-        repeater.append(offset)
+        repeater.append(str(offset))
         repeater.append(offset_dir)
         repeater.append(call)
         repeater.append(dist)
@@ -163,7 +169,7 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
         # If chirp option is ture build chirp list
         if chirp == True and fm_mode == "TRUE":
             chirprepeater = []
-            chirprepeater.append(chirpcount)
+            chirprepeater.append(str(chirpcount))
             chirprepeater.append(call)
             chirprepeater.append(freq)
             chirprepeater.append(offset_dir)
@@ -186,7 +192,7 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
             chirprepeater.append("FM")
             chirprepeater.append("5.00")
             chirprepeater.append("")
-            chirprepeater.append(city + " " + state)
+            chirprepeater.append(city + " " + state + " :: " + notes)
             chirprepeater.append("")
             chirprepeater.append("")
             chirprepeater.append("")
@@ -194,12 +200,20 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
 
         # Build Chirp list
         if chirp == True and fm_mode == "TRUE":
-            chirpbuild(chirprepeater, chirprepeaterlist)
-            chirpcount += 1
+            if searchfilter != '':
+                if any(searchfilter in s for s in chirprepeater):
+                    chirpbuild(chirprepeater, chirprepeaterlist)
+            else:
+                chirpbuild(chirprepeater, chirprepeaterlist)
+                chirpcount += 1
 
 
         # Append filtered output
-        filteroutput(rfilter, repeater, repeater_list)
+        if searchfilter != '':
+            if any(searchfilter in s for s in repeater):
+                filteroutput(rfilter, repeater, repeater_list)
+        else:
+            filteroutput(rfilter, repeater, repeater_list)
 
 def determineoffset(freq_string):
 
@@ -319,6 +333,7 @@ def main(argv):
    rfilter = ["all"]
    rfilterlist = []
    outputfile ="repeaters.csv"
+   searchfilter = ''
 
    # chirp
    chirp = False
@@ -368,7 +383,7 @@ def main(argv):
 
    # Process options
    try:
-       opts, args = getopt.getopt(argv,"hdc:s:r:b:f:po:",["DEBUG=","city=","state=","radius=","bands=","filter=","outputfile="])
+       opts, args = getopt.getopt(argv,"hdc:s:r:b:f:poz:",["DEBUG=","city=","state=","radius=","bands=","filter=","chirp=","outputfile=","searchfilter="])
    except getopt.GetoptError:
       helpmessage(2)
    for opt, arg in opts:
@@ -393,6 +408,8 @@ def main(argv):
          chirp = True
       elif opt in ("-o", "--outputfile"):
          outputfile = arg
+      elif opt in ("-z", "--search"):
+         searchfilter = arg
 
    if DEBUG == True:
       print ('City is "', city)
@@ -425,7 +442,7 @@ def main(argv):
    rpters = df.values.tolist()
 
    # Process Repeater Data
-   processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist)
+   processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist, searchfilter)
 
    # Print Repeaters
    if DEBUG == True:
