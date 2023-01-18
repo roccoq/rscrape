@@ -192,7 +192,7 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
             chirprepeater.append("FM")
             chirprepeater.append("5.00")
             chirprepeater.append("")
-            chirprepeater.append(city + " " + state + " :: " + notes)
+            chirprepeater.append(dist + " :: " + call + " :: " + city + " " + state + " :: " + notes)
             chirprepeater.append("")
             chirprepeater.append("")
             chirprepeater.append("")
@@ -243,6 +243,11 @@ def determineoffset(freq_string):
     if freq >= 146.0 and freq <= 146.39:
         offset = 0.600000
         offset_dir = "+"
+        return {'offset': offset, 'offset_dir': offset_dir}
+
+    if freq >= 146.4 and freq <= 146.5:
+        offset = -1.500000
+        offset_dir = "-"
         return {'offset': offset, 'offset_dir': offset_dir}
 
     if freq >= 146.61 and freq <= 146.99:
@@ -383,7 +388,7 @@ def main(argv):
 
    # Process options
    try:
-       opts, args = getopt.getopt(argv,"hdc:s:r:b:f:poz:",["DEBUG=","city=","state=","radius=","bands=","filter=","chirp=","outputfile=","searchfilter="])
+       opts, args = getopt.getopt(argv,"hdc:s:r:b:f:po:z:",["DEBUG=","city=","state=","radius=","bands=","filter=","chirp=","outputfile=","searchfilter="])
    except getopt.GetoptError:
       helpmessage(2)
    for opt, arg in opts:
