@@ -131,7 +131,7 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
             fm_mode = "TRUE"
 
         # Determine if FM Analog Capable and set DCS
-        if re.search("DCS\(", notes, re.IGNORECASE):
+        if re.search(r"DCS\(", notes, re.IGNORECASE):
             fm_mode = "TRUE"
             code = re.search(r"DCS\(([0-9]{1,3})\)", notes)
             if code:
