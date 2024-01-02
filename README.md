@@ -28,6 +28,7 @@ Optional:
                          valid modes are fm ysf dmr dstar nxdn p25
                          i.e. -f ysf,dmr i.e. nxdn,p2f,dstar, etc
                          if no filter is selected the default is to print all repeaters in radius
+     -k --oneper     only output closest repeater per a given frequency')
      -p --chirp      prints an additional csv file that is CHIRP format The CHIRP file has
                          CHIRP_ added to the beginning of the file name. i.e. CHIRP_repeaters.csv
                          chirp option works with FM analog repeaters ONLY
