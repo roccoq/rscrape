@@ -25,6 +25,7 @@ def helpmessage(exit_code):
    print ('                         valid modes are fm ysf dmr dstar nxdn p25')
    print ('                         i.e. -f ysf,dmr i.e. nxdn,p2f,dstar, etc')
    print ('                         if no filter is selected the default is to print all repeaters in radius')
+   print ('     -k --oneper     only output closest repeater per a given frequency')
    print ('     -p --chirp      prints an additional csv file that is CHIRP format The CHIRP file has')
    print ('                         CHIRP_ added to the beginning of the file name. i.e. CHIRP_repeaters.csv')
    print ('                         chirp option works with FM analog repeaters ONLY')
@@ -36,14 +37,15 @@ def helpmessage(exit_code):
 
    sys.exit(exit_code)
 
-def updatewebformdata(formdata, city,state,radius,bands):
+def updatewebformdata(formdata, city,state,radius,bands, numperfreq):
 
     location = city + ", " + state
     bandlist = bands + ","
 
     formupdate = { "loca":location,
                    "radi":radius,
-                   "band":bandlist
+                   "band":bandlist,
+                   "freq":numperfreq
                    }
     formdata.update(formupdate)
 
@@ -339,6 +341,7 @@ def main(argv):
    rfilterlist = []
    outputfile ="repeaters.csv"
    searchfilter = ''
+   numperfreq = ''
 
    # chirp
    chirp = False
@@ -383,12 +386,13 @@ def main(argv):
            "meth":"RPList",
            "radi":"",
            "loca":"",
+           "freq":"",
            "final": "Go!"
         }
 
    # Process options
    try:
-       opts, args = getopt.getopt(argv,"hdc:s:r:b:f:po:z:",["DEBUG=","city=","state=","radius=","bands=","filter=","chirp=","outputfile=","searchfilter="])
+       opts, args = getopt.getopt(argv,"hdc:s:r:b:f:po:z:k",["DEBUG=","city=","state=","radius=","bands=","filter=","chirp=","outputfile=","searchfilter=","numperfreq="])
    except getopt.GetoptError:
       helpmessage(2)
    for opt, arg in opts:
@@ -415,6 +419,8 @@ def main(argv):
          outputfile = arg
       elif opt in ("-z", "--search"):
          searchfilter = arg
+      elif opt in ("-k", "--oneper"):
+         numperfreq = "1per"
 
    if DEBUG == True:
       print ('City is "', city)
@@ -423,9 +429,10 @@ def main(argv):
       print ('Band(s) is/are "', bands)
       print ('Output file is "', outputfile)
       print ('Filter(s) is/are"', rfilter)
+      print ('NumPerFreq is "', numperfreq)
 
    # Create Webform Data
-   updatewebformdata(formdata, city, state, radius, bands)
+   updatewebformdata(formdata, city, state, radius, bands, numperfreq)
 
    if DEBUG == True:
       print (formdata)
