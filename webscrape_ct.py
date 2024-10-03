@@ -391,8 +391,8 @@ def main(argv):
    # Web Form Data
    formdata = {
            "task":"rsearch",
-           "template":"nesmc",
-           "dbfilter":"nesmc",
+           "template":"csma",
+           "dbfilter":"csma",
            "band":"",
            "sortby":"freq",
            "meth":"RPList",
@@ -460,13 +460,18 @@ def main(argv):
 
    # Print Table in Pandas Data Frame Format
    if DEBUG == True:
+      print("TABLES")
       print(tables[2])
 
    # Select 4th Table as its sorted by distance... to be selectable in the future
-   df=tables[1]
+   df=tables[2]
 
    # Write Data Frame to two dimensional list
    rpters = df.values.tolist()
+    
+   if DEBUG == True:
+      print("RPTERS")
+      print(rpters)
 
    # Process Repeater Data
    processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist, searchfilter, exnotes)
