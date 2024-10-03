@@ -29,6 +29,7 @@ def helpmessage(exit_code):
    print ('     -p --chirp      prints an additional csv file that is CHIRP format The CHIRP file has')
    print ('                         CHIRP_ added to the beginning of the file name. i.e. CHIRP_repeaters.csv')
    print ('                         chirp option works with FM analog repeaters ONLY')
+   print ('     -x --xnotes    print extended notes in comments field, does not apply to chirp output')
    print ('     -z --search     search each repeater entry for the indicated text and only print matches, case sensitive ')
    print ('                         this feature is particularly useful when searching for linked networks using the notes,')
    print ('                         callsign, sponsor, etc. *** Chirp output only contains a subset of data and results')
@@ -49,7 +50,7 @@ def updatewebformdata(formdata, city,state,radius,bands, numperfreq):
                    }
     formdata.update(formupdate)
 
-def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist, searchfilter):
+def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist, searchfilter, exnotes):
     # Remove Header from list
     rpters.pop(0)
 
@@ -67,6 +68,7 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
         p25_nac = ""
         dcs_code = ""
         fm_mode = ""
+        ex_notes = ""
 
         # Seperate City, State and populate variables
         location = re.search(r"([A-Z][A-Za-z\. ]+),\s([A-Z]{2})", rpters[i][0])
@@ -144,6 +146,9 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
         if ysf_mode != "TRUE" and dstar_mode != "TRUE" and nxdn_mode != "TRUE" and p25_mode != "TRUE" and dmr_mode != "TRUE" and fm_mode != "TRUE":
             fm_mode = "TRUE"
 
+        # Extended Notes
+        ex_notes = city + "," + state + "," + call + "," + notes
+
         # Build Repeater Entry
         repeater = []
         repeater.append(city)
@@ -166,7 +171,10 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
         repeater.append(p25_nac)
         repeater.append(dstar_mode)
         repeater.append(ysf_mode)
-        repeater.append(notes)
+        if exnotes == True:
+            repeater.append(ex_notes)
+        else:
+            repeater.append(notes)
 
         # If chirp option is ture build chirp list
         if chirp == True and fm_mode == "TRUE":
@@ -343,6 +351,9 @@ def main(argv):
    searchfilter = ''
    numperfreq = ''
 
+   # extended notes
+   exnotes = False
+
    # chirp
    chirp = False
 
@@ -392,8 +403,9 @@ def main(argv):
 
    # Process options
    try:
-       opts, args = getopt.getopt(argv,"hdc:s:r:b:f:po:z:k",["DEBUG=","city=","state=","radius=","bands=","filter=","chirp=","outputfile=","searchfilter=","numperfreq="])
+       opts, args = getopt.getopt(argv,"hdc:s:r:b:f:po:z:kx",["debug=","city=","state=","radius=","bands=","filter=","chirp","outputfile=","search=","oneper","xnotes"])
    except getopt.GetoptError:
+      print("SYNTAX ERROR!")
       helpmessage(2)
    for opt, arg in opts:
       if opt == '-h':
@@ -421,6 +433,8 @@ def main(argv):
          searchfilter = arg
       elif opt in ("-k", "--oneper"):
          numperfreq = "1per"
+      elif opt in ("-x", "--xnotes"):
+         exnotes = True
 
    if DEBUG == True:
       print ('City is "', city)
@@ -429,7 +443,7 @@ def main(argv):
       print ('Band(s) is/are "', bands)
       print ('Output file is "', outputfile)
       print ('Filter(s) is/are"', rfilter)
-      print ('NumPerFreq is "', numperfreq)
+      print ('OnePer is "', numperfreq)
 
    # Create Webform Data
    updatewebformdata(formdata, city, state, radius, bands, numperfreq)
@@ -448,13 +462,13 @@ def main(argv):
       print(tables[2])
 
    # Select 4th Table as its sorted by distance... to be selectable in the future
-   df=tables[3]
+   df=tables[1]
 
    # Write Data Frame to two dimensional list
    rpters = df.values.tolist()
 
    # Process Repeater Data
-   processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist, searchfilter)
+   processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist, searchfilter, exnotes)
 
    # Print Repeaters
    if DEBUG == True:

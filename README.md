@@ -32,6 +32,7 @@ Optional:
      -p --chirp      prints an additional csv file that is CHIRP format The CHIRP file has
                          CHIRP_ added to the beginning of the file name. i.e. CHIRP_repeaters.csv
                          chirp option works with FM analog repeaters ONLY
+     -x --xnotes     print extended notes in comments field, does not apply to chirp output')
      -z --search     search each repeater entry for the indicated text and only print matches, case sensitive
                          this feature is particularly useful when searching for linked networks using the notes,
                          callsign, sponsor, etc. *** Chirp output only contains a subset of data and results
