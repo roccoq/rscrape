@@ -6,7 +6,6 @@ import pandas as pd
 import re
 import csv
 from io import StringIO
-from pprint import pprint
 
 def helpmessage(exit_code):
    print ('webscrape.py [options]')
@@ -54,12 +53,10 @@ def updatewebformdata(formdata, city,state,radius,bands, numperfreq):
 
 def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist, searchfilter, exnotes):
     # Remove Header from list
-    #rpters.pop(0)
+    rpters.pop(0)
 
     # Iterate through repater list to write in preferred format
     for i in range(len(rpters)):
-
-        print(rpters[i])
 
         # Initialize/clear variables
         ysf_mode = ""
@@ -75,9 +72,7 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
         ex_notes = ""
 
         # Seperate City, State and populate variables
-        location = re.search(r"([A-Z][A-Za-z\. ]+),\s([A-Za-z]{2})", rpters[i][0])
-        print(location)
-        print(rpters[i][1])
+        location = re.search(r"([A-Z][A-Za-z\. ]+),\s([A-Z]{2})", rpters[i][0])
         city = location.group(1)
         state = location.group(2)
 
@@ -394,22 +389,10 @@ def main(argv):
    nesmc_url = "https://rptr.amateur-radio.net/cgi-bin/exec.cgi"
 
    # Web Form Data
-   formdata_nesmc = {
-           "task":"rsearch",
-           "template":"arn",
-           "band":"",
-           "sortby":"freq",
-           "meth":"RPList",
-           "radi":"",
-           "loca":"",
-           "freq":"",
-           "final": "Go!"
-        }
-
-   formdata_csma = {
+   formdata = {
            "task":"rsearch",
            "template":"nesmc",
-           "dbfilter":"csma",
+           "dbfilter":"nesmc",
            "band":"",
            "sortby":"freq",
            "meth":"RPList",
@@ -464,62 +447,33 @@ def main(argv):
       print ('OnePer is "', numperfreq)
 
    # Create Webform Data
-   #updatewebformdata(formdata, city, state, radius, bands, numperfreq)
+   updatewebformdata(formdata, city, state, radius, bands, numperfreq)
 
    if DEBUG == True:
-      print (formdata_nesmc)
-      print (formdata_csma)
+      print (formdata)
 
    # POST Form Request
-   updatewebformdata(formdata_nesmc, city, state, radius, bands, numperfreq)
-   if DEBUG == True:
-      print ("Querying NESMC")
-   nesmc_rptrs = requests.post(nesmc_url, data=formdata_nesmc)
-   
-   updatewebformdata(formdata_csma, city, state, radius, bands, numperfreq)
-   if DEBUG == True:
-      print ("Querying CSMA")
-   csma_rptrs = requests.post(nesmc_url, data=formdata_csma)
+   nesmc_rptrs = requests.post(nesmc_url, data=formdata)
 
    # Read HTML response and parse table
-   tables_nesmc = pd.read_html(StringIO(nesmc_rptrs.text))
-   tables_csma = pd.read_html(StringIO(csma_rptrs.text))
+   tables = pd.read_html(StringIO(nesmc_rptrs.text))
 
    # Print Table in Pandas Data Frame Format
    if DEBUG == True:
-      print("TABLES NESMC")
-      print(tables_nesmc)
-      print("TABLES CSMA")
-      print(tables_csma[1])
+      print(tables[2])
 
    # Select 4th Table as its sorted by distance... to be selectable in the future
-   df_nesmc=tables_nesmc[1]
-   df_csma=tables_csma[1]
-
-   # Drop first row which is header information
-   df_nesmc = df_nesmc.drop(index=0)
-   df_csma = df_csma.drop(index=0)
-
-   frames = [df_nesmc, df_csma]
-   df = pd.concat(frames)
-   df.columns = ["CITY", "FREQ", "PL", "CALL", "DIST", "SPONSOR", "NOTES"]
-   df_sorted = (df.sort_values(by=['FREQ']))
-   pprint(df_sorted)
+   df=tables[1]
 
    # Write Data Frame to two dimensional list
-   rpters = df_sorted.values.tolist()
-    
-   if DEBUG == True:
-      print("RPTERS")
-      print(rpters)
-    
+   rpters = df.values.tolist()
+
    # Process Repeater Data
    processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist, searchfilter, exnotes)
 
-
    # Print Repeaters
    if DEBUG == True:
-       print(*repeater_list)
+       print(*repeater_list, sep='\n')
 
    # Write repeater list to csv
    with open(outputfile, 'w', encoding='UTF8', newline='') as f:

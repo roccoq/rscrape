@@ -6,6 +6,7 @@ import pandas as pd
 import re
 import csv
 from io import StringIO
+from pprint import pprint
 
 def helpmessage(exit_code):
    print ('webscrape.py [options]')
@@ -30,7 +31,13 @@ def helpmessage(exit_code):
    print ('     -p --chirp      prints an additional csv file that is CHIRP format The CHIRP file has')
    print ('                         CHIRP_ added to the beginning of the file name. i.e. CHIRP_repeaters.csv')
    print ('                         chirp option works with FM analog repeaters ONLY')
-   print ('     -x --xnotes    print extended notes in comments field, does not apply to chirp output')
+   print ('     -q --dbfilter   select which database to query the valid choices are :')
+   print ('                         nerep -> New England Repeater Directory')
+   print ('                         nesmc -> New England Spectrum Managment Council')
+   print ('                         csma  -> Connecticut Spectrum Management Association')
+   print ('                         nyrep -> New York Repeader Directory')
+   print ('                         neny  -> New England and New York Repeater Directories combined (DEFAULT)')
+   print ('     -x --xnotes     print extended notes in comments field, does not apply to chirp output')
    print ('     -z --search     search each repeater entry for the indicated text and only print matches, case sensitive ')
    print ('                         this feature is particularly useful when searching for linked networks using the notes,')
    print ('                         callsign, sponsor, etc. *** Chirp output only contains a subset of data and results')
@@ -39,7 +46,7 @@ def helpmessage(exit_code):
 
    sys.exit(exit_code)
 
-def updatewebformdata(formdata, city,state,radius,bands, numperfreq):
+def updatewebformdata(formdata, city,state,radius,bands, numperfreq, dbfilter):
 
     location = city + ", " + state
     bandlist = bands + ","
@@ -47,7 +54,8 @@ def updatewebformdata(formdata, city,state,radius,bands, numperfreq):
     formupdate = { "loca":location,
                    "radi":radius,
                    "band":bandlist,
-                   "freq":numperfreq
+                   "freq":numperfreq,
+                   "dbfilter":dbfilter
                    }
     formdata.update(formupdate)
 
@@ -57,6 +65,8 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
 
     # Iterate through repater list to write in preferred format
     for i in range(len(rpters)):
+
+        print(rpters[i])
 
         # Initialize/clear variables
         ysf_mode = ""
@@ -72,7 +82,7 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
         ex_notes = ""
 
         # Seperate City, State and populate variables
-        location = re.search(r"([A-Z][A-Za-z\. ]+),\s([A-Z]{2})", rpters[i][0])
+        location = re.search(r"([A-Z][A-Za-z\.\/ ]+),\s([A-Z]{2})", rpters[i][0])
         city = location.group(1)
         state = location.group(2)
 
@@ -86,7 +96,10 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
         offset_dir = offsetinfo['offset_dir']
 
         # Get Repeater Callsign
-        call = rpters[i][3]
+        if 'nan' in str(rpters[i][3]):
+            call="EMPTY"
+        else:
+            call = rpters[i][3]
 
         # Seperate Distance and Direction and populate variables
         distdir = re.search(r"([0-9]{1,3}.[0-9])([EWNS][EW]{0,1}|)", rpters[i][4])
@@ -98,35 +111,37 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
 
         # Get Repeater Notes
         notes = rpters[i][6]
+        if 'nan' in str(notes):
+            notes="EMPTY"
+        else:
+            # Determine if C4FM Capable
+            if re.search('fusion', notes, re.IGNORECASE):
+                ysf_mode = "TRUE"
 
-        # Determine if C4FM Capable
-        if re.search('fusion', notes, re.IGNORECASE):
-            ysf_mode = "TRUE"
+            # Determine if D-STAR Capable
+            if re.search('d-star', notes, re.IGNORECASE):
+                dstar_mode = "TRUE"
 
-        # Determine if D-STAR Capable
-        if re.search('d-star', notes, re.IGNORECASE):
-            dstar_mode = "TRUE"
+            # Determine if NXDN Capable and set RAN
+            if re.search('nxdn', notes, re.IGNORECASE):
+                nxdn_mode = "TRUE"
+                code = re.search(r"NXDN\:(RAN[0-9]{1}|)", notes)
+                if code:
+                    nxdn_ran = code.group(1)
 
-        # Determine if NXDN Capable and set RAN
-        if re.search('nxdn', notes, re.IGNORECASE):
-            nxdn_mode = "TRUE"
-            code = re.search(r"NXDN\:(RAN[0-9]{1}|)", notes)
-            if code:
-                nxdn_ran = code.group(1)
+            # Determine if DMR Capable and set CC
+            if re.search('dmr', notes, re.IGNORECASE):
+                dmr_mode = "TRUE"
+                code = re.search(r"DMR\:([C]{2,4}[0-9]{1,2}|)", notes)
+                if code:
+                    dmr_cc = code.group(1)
 
-        # Determine if DMR Capable and set CC
-        if re.search('dmr', notes, re.IGNORECASE):
-            dmr_mode = "TRUE"
-            code = re.search(r"DMR\:([C]{2,4}[0-9]{1,2}|)", notes)
-            if code:
-                dmr_cc = code.group(1)
-
-        # Determine if P25 Capable and ser NAC
-        if re.search('p25', notes, re.IGNORECASE):
-            p25_mode = "TRUE"
-            code = re.search(r"P25\:NAC[:]{0,1}([0-9]{3}|)", notes)
-            if code:
-                p25_nac = code.group(1)
+            # Determine if P25 Capable and ser NAC
+            if re.search('p25', notes, re.IGNORECASE):
+                p25_mode = "TRUE"
+                code = re.search(r"P25\:NAC[:]{0,1}([0-9]{3}|)", notes)
+                if code:
+                    p25_nac = code.group(1)
 
         # Determine if Analog FM capable and set PL Tone
         if 'nan' in str(rpters[i][2]):
@@ -136,11 +151,12 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
             fm_mode = "TRUE"
 
         # Determine if FM Analog Capable and set DCS
-        if re.search(r"DCS\(", notes, re.IGNORECASE):
-            fm_mode = "TRUE"
-            code = re.search(r"DCS\(([0-9]{1,3})\)", notes)
-            if code:
-                dcs_code = code.group(1)
+        if notes != "EMPTY":    
+            if re.search(r"DCS\(", notes, re.IGNORECASE):
+                fm_mode = "TRUE"
+                code = re.search(r"DCS\(([0-9]{1,3})\)", notes)
+                if code:
+                    dcs_code = code.group(1)
 
         # Some stations are FM and dont have a PL or DCS
         # Adding logic for these stations
@@ -148,7 +164,9 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
             fm_mode = "TRUE"
 
         # Extended Notes
-        ex_notes = city + "," + state + "," + call + "," + notes
+        print(call)
+        if notes != "EMPTY":
+            ex_notes = city + "," + state + "," + call + "," + notes
 
         # Build Repeater Entry
         repeater = []
@@ -351,6 +369,7 @@ def main(argv):
    outputfile ="repeaters.csv"
    searchfilter = ''
    numperfreq = ''
+   dbfilter = 'neny'
 
    # extended notes
    exnotes = False
@@ -392,7 +411,6 @@ def main(argv):
    formdata = {
            "task":"rsearch",
            "template":"nesmc",
-           "dbfilter":"nesmc",
            "band":"",
            "sortby":"freq",
            "meth":"RPList",
@@ -404,7 +422,7 @@ def main(argv):
 
    # Process options
    try:
-       opts, args = getopt.getopt(argv,"hdc:s:r:b:f:po:z:kx",["debug=","city=","state=","radius=","bands=","filter=","chirp","outputfile=","search=","oneper","xnotes"])
+       opts, args = getopt.getopt(argv,"hdc:s:r:b:f:po:z:kxq:",["debug=","city=","state=","radius=","bands=","filter=","chirp","outputfile=","search=","oneper","xnotes","dbfilter"])
    except getopt.GetoptError:
       print("SYNTAX ERROR!")
       helpmessage(2)
@@ -436,6 +454,8 @@ def main(argv):
          numperfreq = "1per"
       elif opt in ("-x", "--xnotes"):
          exnotes = True
+      elif opt in ("-q", "--dbfilter"):
+         dbfilter = arg
 
    if DEBUG == True:
       print ('City is "', city)
@@ -445,28 +465,63 @@ def main(argv):
       print ('Output file is "', outputfile)
       print ('Filter(s) is/are"', rfilter)
       print ('OnePer is "', numperfreq)
+      print ('dbfilter is"', dbfilter)
 
    # Create Webform Data
-   updatewebformdata(formdata, city, state, radius, bands, numperfreq)
+   if dbfilter == "neny":
+      updatewebformdata(formdata, city, state, radius, bands, numperfreq, "nerep")
+      nerep_rptrs = requests.post(nesmc_url, data=formdata)
+      updatewebformdata(formdata, city, state, radius, bands, numperfreq, "nyrep")
+      nyrep_rptrs = requests.post(nesmc_url, data=formdata)
 
-   if DEBUG == True:
-      print (formdata)
+      # Read HTML response and parse table
+      tables_nerep = pd.read_html(StringIO(nerep_rptrs.text))
+      tables_nyrep = pd.read_html(StringIO(nyrep_rptrs.text))
 
-   # POST Form Request
-   nesmc_rptrs = requests.post(nesmc_url, data=formdata)
+      # Print Table in Pandas Data Frame Format
+      if DEBUG == True:
+         print("TABLES NESMC")
+         print(tables_nesmc)
+         print("TABLES CSMA")
+         print(tables_csma[1])
 
-   # Read HTML response and parse table
-   tables = pd.read_html(StringIO(nesmc_rptrs.text))
+      # Select 4th Table as its sorted by distance... to be selectable in the future
+      df_nerep=tables_nerep[1]
+      df_nyrep=tables_nyrep[1]
 
-   # Print Table in Pandas Data Frame Format
-   if DEBUG == True:
-      print(tables[2])
+      # Drop first row which is header information
+      df_nerep = df_nerep.drop(index=0)
+      df_nyrep = df_nyrep.drop(index=0)
 
-   # Select 4th Table as its sorted by distance... to be selectable in the future
-   df=tables[1]
+      frames = [df_nerep, df_nyrep]
+      df = pd.concat(frames)
+      df.columns = ["CITY", "FREQ", "PL", "CALL", "DIST", "SPONSOR", "NOTES"]
+      df_sorted = (df.sort_values(by=['FREQ']))
+      pprint(df_sorted)
 
-   # Write Data Frame to two dimensional list
-   rpters = df.values.tolist()
+      # Write Data Frame to two dimensional list
+      rpters = df_sorted.values.tolist()
+   else:
+      updatewebformdata(formdata, city, state, radius, bands, numperfreq, dbfilter)
+
+      if DEBUG == True:
+         print (formdata)
+
+      # POST Form Request
+      nesmc_rptrs = requests.post(nesmc_url, data=formdata)
+
+      # Read HTML response and parse table
+      tables = pd.read_html(StringIO(nesmc_rptrs.text))
+
+      # Print Table in Pandas Data Frame Format
+      if DEBUG == True:
+         print(tables[2])
+
+      # Select 4th Table as its sorted by distance... to be selectable in the future
+      df=tables[1]
+
+      # Write Data Frame to two dimensional list
+      rpters = df.values.tolist()
 
    # Process Repeater Data
    processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist, searchfilter, exnotes)
