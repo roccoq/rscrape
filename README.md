@@ -28,14 +28,20 @@ Optional:
                          valid modes are fm ysf dmr dstar nxdn p25
                          i.e. -f ysf,dmr i.e. nxdn,p2f,dstar, etc
                          if no filter is selected the default is to print all repeaters in radius
-     -k --oneper     only output closest repeater per a given frequency')
+     -k --oneper     only output closest repeater per a given frequency
      -p --chirp      prints an additional csv file that is CHIRP format The CHIRP file has
                          CHIRP_ added to the beginning of the file name. i.e. CHIRP_repeaters.csv
                          chirp option works with FM analog repeaters ONLY
-     -x --xnotes     print extended notes in comments field, does not apply to chirp output')
-     -z --search     search each repeater entry for the indicated text and only print matches, case sensitive
+     -q --dbfilter   select which database to query the valid choices are :
+                         nerep -> New England Repeater Directory
+                         nesmc -> New England Spectrum Managment Council
+                         csma  -> Connecticut Spectrum Management Association
+                         nyrep -> New York Repeader Directory
+                         neny  -> New England and New York Repeater Directories combined (DEFAULT)
+     -x --xnotes     print extended notes in comments field, does not apply to chirp output
+     -z --search     search each repeater entry for the indicated text and only print matches, case sensitive 
                          this feature is particularly useful when searching for linked networks using the notes,
                          callsign, sponsor, etc. *** Chirp output only contains a subset of data and results
-                         will differ from the primary repeater CSV data file
+                         will differ from the primary repeater csv data file
                          i.e. -z "NB1RI"
 ```
