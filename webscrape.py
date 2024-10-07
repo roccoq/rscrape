@@ -59,14 +59,16 @@ def updatewebformdata(formdata, city,state,radius,bands, numperfreq, dbfilter):
                    }
     formdata.update(formupdate)
 
-def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist, searchfilter, exnotes):
-    # Remove Header from list
-    rpters.pop(0)
+def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist, searchfilter, exnotes, DEBUG):
+    
+    valid_pls = ['67.0', '69.3', '71.9', '74.4', '77.0', '79.7', '82.5', '85.4', '88.5', '91.5', '94.8', '97.4', '100.0', '103.5', '107.2', '110.9', '114.8', '118.8', '123.0', '127.3', '131.8', '136.5', '141.3', '146.2', '151.4', '156.7', '162.2', '167.9', '173.8', '179.9', '186.2', '192.8', '203.5', '206.5', '210.7', '218.1', '225.7', '229.1', '233.6', '241.8', '250.3', '254.1']
+    valid_dcs = []
 
     # Iterate through repater list to write in preferred format
     for i in range(len(rpters)):
 
-        print(rpters[i])
+        if DEBUG == True:
+           print(rpters[i])
 
         # Initialize/clear variables
         ysf_mode = ""
@@ -80,6 +82,8 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
         dcs_code = ""
         fm_mode = ""
         ex_notes = ""
+        fm_tone_mode = ""
+        tx_power = "Low"
 
         # Seperate City, State and populate variables
         location = re.search(r"([A-Z][A-Za-z\.\/ ]+),\s([A-Z]{2})", rpters[i][0])
@@ -109,6 +113,27 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
         # Get Repeater Sponsor
         sponsor = rpters[i][5]
 
+        if 'nan' not in str(rpters[i][2]):
+            # Determine if NXDN Capable in PL Section
+            if re.search('nxdn', rpters[i][2], re.IGNORECASE):
+                nxdn_mode = "TRUE"
+
+            # Determine if YSF Capable in PL Section
+            if re.search('ysf', rpters[i][2], re.IGNORECASE):
+                ysf_mode = "TRUE"
+        
+            # Determine if D-Star Capable in PL Section
+            if re.search('d-star', rpters[i][2], re.IGNORECASE):
+                ysf_mode = "TRUE"
+
+            # Determine if DMR Capable in PL Section
+            if re.search('dmr', rpters[i][2], re.IGNORECASE):
+                dmr_mode = "TRUE"
+
+            # Determine if DMR Capable in PL Section
+            if re.search('p25', rpters[i][2], re.IGNORECASE):
+                p25_mode = "TRUE"
+                
         # Get Repeater Notes
         notes = rpters[i][6]
         if 'nan' in str(notes):
@@ -118,37 +143,63 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
             if re.search('fusion', notes, re.IGNORECASE):
                 ysf_mode = "TRUE"
 
+            if re.search('ysf', notes, re.IGNORECASE):
+                ysf_mode = "TRUE"
+
             # Determine if D-STAR Capable
             if re.search('d-star', notes, re.IGNORECASE):
                 dstar_mode = "TRUE"
-
-            # Determine if NXDN Capable and set RAN
+           
+            # Get NXDN RAN if defined
             if re.search('nxdn', notes, re.IGNORECASE):
                 nxdn_mode = "TRUE"
-                code = re.search(r"NXDN\:(RAN[0-9]{1}|)", notes)
+
+            if nxdn_mode == "TRUE":
+                code = re.search(r"RAN[0-9]{1,2}", notes)
                 if code:
-                    nxdn_ran = code.group(1)
+                    nxdn_ran = code.group(0)
+                    
 
             # Determine if DMR Capable and set CC
             if re.search('dmr', notes, re.IGNORECASE):
                 dmr_mode = "TRUE"
-                code = re.search(r"DMR\:([C]{2,4}[0-9]{1,2}|)", notes)
+            
+            if dmr_mode == "TRUE":  
+                code = re.search(r"[C]{2,4}[0-9]{1,2}", notes)
                 if code:
-                    dmr_cc = code.group(1)
+                    dmr_cc = code.group(0)
 
             # Determine if P25 Capable and ser NAC
             if re.search('p25', notes, re.IGNORECASE):
                 p25_mode = "TRUE"
-                code = re.search(r"P25\:NAC[:]{0,1}([0-9]{3}|)", notes)
+
+            if p25_mode == "TRUE": 
+                code = re.search(r"(NAC\:|NAC)([0-9]{3,4}|)", notes)
                 if code:
-                    p25_nac = code.group(1)
+                    p25_nac = code.group(1) + " " + code.group(2)
 
         # Determine if Analog FM capable and set PL Tone
         if 'nan' in str(rpters[i][2]):
             pltone = ""
         else:
-            pltone = rpters[i][2]
-            fm_mode = "TRUE"
+            if re.search(r"[6-9]{1}[0-9]{1}\.[0-9]{1}|[1-2]{1}[0-9]{2}\.[0-9]{1}", rpters[i][2], re.IGNORECASE):
+               code = re.search(r"[6-9]{1}[0-9]{1}\.[0-9]{1}|[1-2]{1}[0-9]{2}\.[0-9]{1}", rpters[i][2], re.IGNORECASE)
+               pltone = code.group(0)
+               fm_mode = "TRUE"
+               fm_tone_mode = "Tone" 
+            else:
+                pltone = ""
+
+        # Find PL in notes
+        if notes != "EMPTY":    
+            if re.search(r"[6-9]{1}[0-9]{1}\.[0-9]{1}|[1-2]{1}[0-9]{2}\.[0-9]{1}", notes, re.IGNORECASE):
+                code = re.search(r"[6-9]{1}[0-9]{1}\.[0-9]{1}|[1-2]{1}[0-9]{2}\.[0-9]{1}", notes, re.IGNORECASE)
+                if code:
+                    if code.group(0) in valid_pls:
+                        fm_mode = "TRUE"
+                        pltone = code.group(0)
+                        fm_tone_mode = "Tone"
+        
 
         # Determine if FM Analog Capable and set DCS
         if notes != "EMPTY":    
@@ -157,6 +208,14 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
                 code = re.search(r"DCS\(([0-9]{1,3})\)", notes)
                 if code:
                     dcs_code = code.group(1)
+                    fm_tone_mode = "DCS"
+
+            if re.search(r"D[1-9][0-9]{2}", notes, re.IGNORECASE):
+                fm_mode = "TRUE"
+                code = re.search(r"D([1-9][0-9]{2})", notes)
+                if code:
+                    dcs_code = code.group(1)
+                    fm_tone_mode = "DCS"
 
         # Some stations are FM and dont have a PL or DCS
         # Adding logic for these stations
@@ -164,7 +223,8 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
             fm_mode = "TRUE"
 
         # Extended Notes
-        print(call)
+        if DEBUG == True:
+           print(call)
         if notes != "EMPTY":
             ex_notes = city + "," + state + "," + call + "," + notes
 
@@ -182,6 +242,7 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
         repeater.append(fm_mode)
         repeater.append(pltone)
         repeater.append(dcs_code)
+        repeater.append(fm_tone_mode)
         repeater.append(dmr_mode)
         repeater.append(dmr_cc)
         repeater.append(nxdn_mode)
@@ -190,6 +251,8 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
         repeater.append(p25_nac)
         repeater.append(dstar_mode)
         repeater.append(ysf_mode)
+        repeater.append(tx_power)
+
         if exnotes == True:
             repeater.append(ex_notes)
         else:
@@ -393,7 +456,7 @@ def main(argv):
    chirprepeater = []
 
    # Repeater Header
-   repeater_header = ['City','State','Frequency','Offset','OffsetDir','Callsign','Distance','Direction','Sponsor','FM','PL Tone','DCS','DMR','DMR CC','NXDN','NXDN RAN','P25','P25 NAC','D-STAR','YSF','Notes']
+   repeater_header = ['City','State','Frequency','Offset','OffsetDir','Callsign','Distance','Direction','Sponsor','FM','PL Tone','Tone Mode','DCS','DMR','DMR CC','NXDN','NXDN RAN','P25','P25 NAC','D-STAR','YSF','TX Power','Notes']
 
    # Chirp Repeater repeater_header
    chirprepeaterlist_header = ['Location','Name','Frequency','Duplex','Offset','Tone','rToneFreq','cToneFreq','DtcsCode','DtcsPolarity','Mode','TStep','Skip','Comment','URCALL','RPT1CALL','RPT2CALL','DVCODE']
@@ -480,10 +543,10 @@ def main(argv):
 
       # Print Table in Pandas Data Frame Format
       if DEBUG == True:
-         print("TABLES NESMC")
-         print(tables_nesmc)
-         print("TABLES CSMA")
-         print(tables_csma[1])
+         print("TABLES NEREP")
+         print(tables_nerep)
+         print("TABLES NYEP")
+         print(tables_nyrep[1])
 
       # Select 4th Table as its sorted by distance... to be selectable in the future
       df_nerep=tables_nerep[1]
@@ -523,8 +586,11 @@ def main(argv):
       # Write Data Frame to two dimensional list
       rpters = df.values.tolist()
 
+      # Remove Header from list
+      rpters.pop(0)
+
    # Process Repeater Data
-   processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist, searchfilter, exnotes)
+   processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist, searchfilter, exnotes, DEBUG)
 
    # Print Repeaters
    if DEBUG == True:
