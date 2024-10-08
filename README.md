@@ -37,6 +37,7 @@ Optional:
                          nesmc -> New England Spectrum Managment Council
                          csma  -> Connecticut Spectrum Management Association
                          nyrep -> New York Repeader Directory
+                         nesct -> New England Spectrum Managment Council and Connecticut Spectrum Management Association combined
                          neny  -> New England and New York Repeater Directories combined (DEFAULT)
      -x --xnotes     print extended notes in comments field, does not apply to chirp output
      -z --search     search each repeater entry for the indicated text and only print matches, case sensitive 

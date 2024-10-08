@@ -36,6 +36,7 @@ def helpmessage(exit_code):
    print ('                         nesmc -> New England Spectrum Managment Council')
    print ('                         csma  -> Connecticut Spectrum Management Association')
    print ('                         nyrep -> New York Repeader Directory')
+   print ('                         nesct -> New England Spectrum Managment Council and Connecticut Spectrum Management Association combined')
    print ('                         neny  -> New England and New York Repeater Directories combined (DEFAULT)')
    print ('     -x --xnotes     print extended notes in comments field, does not apply to chirp output')
    print ('     -z --search     search each repeater entry for the indicated text and only print matches, case sensitive ')
@@ -84,11 +85,16 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
         ex_notes = ""
         fm_tone_mode = ""
         tx_power = "Low"
+        operating_mode = ""
 
         # Seperate City, State and populate variables
-        location = re.search(r"([A-Z][A-Za-z\.\/ ]+),\s([A-Z]{2})", rpters[i][0])
-        city = location.group(1)
-        state = location.group(2)
+        if 'nan' in str(rpters[i][0]):
+            city = "EMPTY"
+            state = "EMPTY"
+        else:
+            location = re.search(r"([A-Z][A-Za-z\.\/ ]+),\s([A-Za-z]{2})", rpters[i][0])
+            city = location.group(1)
+            state = location.group(2)
 
         # Get Frequency
         freq = rpters[i][1]
@@ -222,6 +228,12 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
         if ysf_mode != "TRUE" and dstar_mode != "TRUE" and nxdn_mode != "TRUE" and p25_mode != "TRUE" and dmr_mode != "TRUE" and fm_mode != "TRUE":
             fm_mode = "TRUE"
 
+        #YSF Operating Mode
+        if fm_mode == "TRUE":
+            operating_mode="FM"
+        if ysf_mode == "TRUE":
+            operating_mode="Auto"
+
         # Extended Notes
         if DEBUG == True:
            print(call)
@@ -252,6 +264,7 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
         repeater.append(dstar_mode)
         repeater.append(ysf_mode)
         repeater.append(tx_power)
+        repeater.append(operating_mode)
 
         if exnotes == True:
             repeater.append(ex_notes)
@@ -395,23 +408,23 @@ def filteroutput(rfilter, repeater, repeater_list):
             repeater_list.append(repeater)
             return
     if "ysf" in rfilter:
-        if repeater[19] == "TRUE":
+        if repeater[20] == "TRUE":
             repeater_list.append(repeater)
             return
     if "dmr" in rfilter:
-        if repeater[12] == "TRUE":
+        if repeater[13] == "TRUE":
             repeater_list.append(repeater)
             return
     if "dstar" in rfilter:
-        if repeater[18] == "TRUE":
+        if repeater[19] == "TRUE":
             repeater_list.append(repeater)
             return
     if "p25" in rfilter:
-        if repeater[16] == "TRUE":
+        if repeater[17] == "TRUE":
             repeater_list.append(repeater)
             return
     if "nxdn" in rfilter:
-        if repeater[14] == "TRUE":
+        if repeater[15] == "TRUE":
             repeater_list.append(repeater)
             return
 
@@ -456,7 +469,7 @@ def main(argv):
    chirprepeater = []
 
    # Repeater Header
-   repeater_header = ['City','State','Frequency','Offset','OffsetDir','Callsign','Distance','Direction','Sponsor','FM','PL Tone','Tone Mode','DCS','DMR','DMR CC','NXDN','NXDN RAN','P25','P25 NAC','D-STAR','YSF','TX Power','Notes']
+   repeater_header = ['City','State','Frequency','Offset','OffsetDir','Callsign','Distance','Direction','Sponsor','FM','PL Tone','Tone Mode','DCS','DMR','DMR CC','NXDN','NXDN RAN','P25','P25 NAC','D-STAR','YSF','TX Power','Operating Mode', 'Notes']
 
    # Chirp Repeater repeater_header
    chirprepeaterlist_header = ['Location','Name','Frequency','Duplex','Offset','Tone','rToneFreq','cToneFreq','DtcsCode','DtcsPolarity','Mode','TStep','Skip','Comment','URCALL','RPT1CALL','RPT2CALL','DVCODE']
@@ -560,10 +573,46 @@ def main(argv):
       df = pd.concat(frames)
       df.columns = ["CITY", "FREQ", "PL", "CALL", "DIST", "SPONSOR", "NOTES"]
       df_sorted = (df.sort_values(by=['FREQ']))
-      pprint(df_sorted)
+      #pprint(df_sorted)
 
       # Write Data Frame to two dimensional list
       rpters = df_sorted.values.tolist()
+   
+   # Create Webform Data
+   elif dbfilter == "nesct":
+      updatewebformdata(formdata, city, state, radius, bands, numperfreq, "nesmc")
+      nerep_rptrs = requests.post(nesmc_url, data=formdata)
+      updatewebformdata(formdata, city, state, radius, bands, numperfreq, "csma")
+      nyrep_rptrs = requests.post(nesmc_url, data=formdata)
+
+      # Read HTML response and parse table
+      tables_nerep = pd.read_html(StringIO(nerep_rptrs.text))
+      tables_nyrep = pd.read_html(StringIO(nyrep_rptrs.text))
+
+      # Print Table in Pandas Data Frame Format
+      if DEBUG == True:
+         print("TABLES NEREP")
+         print(tables_nerep)
+         print("TABLES NYEP")
+         print(tables_nyrep[1])
+
+      # Select 4th Table as its sorted by distance... to be selectable in the future
+      df_nerep=tables_nerep[1]
+      df_nyrep=tables_nyrep[1]
+
+      # Drop first row which is header information
+      df_nerep = df_nerep.drop(index=0)
+      df_nyrep = df_nyrep.drop(index=0)
+
+      frames = [df_nerep, df_nyrep]
+      df = pd.concat(frames)
+      df.columns = ["CITY", "FREQ", "PL", "CALL", "DIST", "SPONSOR", "NOTES"]
+      df_sorted = (df.sort_values(by=['FREQ']))
+      #pprint(df_sorted)
+
+      # Write Data Frame to two dimensional list
+      rpters = df_sorted.values.tolist()     
+
    else:
       updatewebformdata(formdata, city, state, radius, bands, numperfreq, dbfilter)
 
