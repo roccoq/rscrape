@@ -37,7 +37,8 @@ Optional:
                          nesmc -> New England Spectrum Managment Council
                          csma  -> Connecticut Spectrum Management Association
                          nyrep -> New York Repeader Directory
-                         nesct -> New England Spectrum Managment Council and Connecticut Spectrum Management Association combined
+                         nesct -> New England Spectrum Managment Council and
+                                  Connecticut Spectrum Management Association combined
                          neny  -> New England and New York Repeater Directories combined (DEFAULT)
      -x --xnotes     print extended notes in comments field, does not apply to chirp output
      -z --search     search each repeater entry for the indicated text and only print matches, case sensitive 
@@ -45,4 +46,10 @@ Optional:
                          callsign, sponsor, etc. *** Chirp output only contains a subset of data and results
                          will differ from the primary repeater csv data file
                          i.e. -z "NB1RI"
+     -a --amsmode    For C4FM radios using ADMS/RT Systems programmers
+                         Sets proper AMS/Operating mode
+                         v1 -> sets Operating Mode to "Auto" on C4FM capable repeaters
+                             (i.e. FTM-100/FTM-400)
+                         v2 -> sets Operating Mode to "FM" and AMS to "Y" on C4FM capable repeaters
+                             (i.e. FT3dr)
 ```

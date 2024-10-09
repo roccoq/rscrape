@@ -36,7 +36,8 @@ def helpmessage(exit_code):
    print ('                         nesmc -> New England Spectrum Managment Council')
    print ('                         csma  -> Connecticut Spectrum Management Association')
    print ('                         nyrep -> New York Repeader Directory')
-   print ('                         nesct -> New England Spectrum Managment Council and Connecticut Spectrum Management Association combined')
+   print ('                         nesct -> New England Spectrum Managment Council and')
+   print ('                                  Connecticut Spectrum Management Association combined')
    print ('                         neny  -> New England and New York Repeater Directories combined (DEFAULT)')
    print ('     -x --xnotes     print extended notes in comments field, does not apply to chirp output')
    print ('     -z --search     search each repeater entry for the indicated text and only print matches, case sensitive ')
@@ -44,7 +45,12 @@ def helpmessage(exit_code):
    print ('                         callsign, sponsor, etc. *** Chirp output only contains a subset of data and results')
    print ('                         will differ from the primary repeater csv data file')
    print ('                         i.e. -z "NB1RI"')
-
+   print ('     -a --amsmode    For C4FM radios using ADMS/RT Systems programmers')
+   print ('                         Sets proper AMS/Operating mode')
+   print ('                         v1 -> sets Operating Mode to "Auto" on C4FM capable repeaters')
+   print ('                             (i.e. FTM-100/FTM-400)')
+   print ('                         v2 -> sets Operating Mode to "FM" and AMS to "Y" on C4FM capable repeaters')
+   print ('                             (i.e. FT3dr)')
    sys.exit(exit_code)
 
 def updatewebformdata(formdata, city,state,radius,bands, numperfreq, dbfilter):
@@ -60,7 +66,7 @@ def updatewebformdata(formdata, city,state,radius,bands, numperfreq, dbfilter):
                    }
     formdata.update(formupdate)
 
-def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist, searchfilter, exnotes, DEBUG):
+def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist, searchfilter, exnotes, DEBUG, tx_power, ams_mode):
     
     valid_pls = ['67.0', '69.3', '71.9', '74.4', '77.0', '79.7', '82.5', '85.4', '88.5', '91.5', '94.8', '97.4', '100.0', '103.5', '107.2', '110.9', '114.8', '118.8', '123.0', '127.3', '131.8', '136.5', '141.3', '146.2', '151.4', '156.7', '162.2', '167.9', '173.8', '179.9', '186.2', '192.8', '203.5', '206.5', '210.7', '218.1', '225.7', '229.1', '233.6', '241.8', '250.3', '254.1']
     valid_dcs = []
@@ -84,8 +90,8 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
         fm_mode = ""
         ex_notes = ""
         fm_tone_mode = ""
-        tx_power = "Low"
         operating_mode = ""
+        ams = "N"
 
         # Seperate City, State and populate variables
         if 'nan' in str(rpters[i][0]):
@@ -231,8 +237,16 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
         #YSF Operating Mode
         if fm_mode == "TRUE":
             operating_mode="FM"
+            ams="N"
+
         if ysf_mode == "TRUE":
-            operating_mode="Auto"
+            if ams_mode == "v1":
+                operating_mode="Auto"
+                ams=""
+            elif ams_mode == "v2":
+                operating_mode="FM"
+                ams="Y"
+                
 
         # Extended Notes
         if DEBUG == True:
@@ -265,6 +279,7 @@ def processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirp
         repeater.append(ysf_mode)
         repeater.append(tx_power)
         repeater.append(operating_mode)
+        repeater.append(ams)
 
         if exnotes == True:
             repeater.append(ex_notes)
@@ -446,6 +461,8 @@ def main(argv):
    searchfilter = ''
    numperfreq = ''
    dbfilter = 'neny'
+   tx_power = 'Low'
+   ams_mode = 'v1'
 
    # extended notes
    exnotes = False
@@ -469,7 +486,7 @@ def main(argv):
    chirprepeater = []
 
    # Repeater Header
-   repeater_header = ['City','State','Frequency','Offset','OffsetDir','Callsign','Distance','Direction','Sponsor','FM','PL Tone','Tone Mode','DCS','DMR','DMR CC','NXDN','NXDN RAN','P25','P25 NAC','D-STAR','YSF','TX Power','Operating Mode', 'Notes']
+   repeater_header = ['City','State','Frequency','Offset','Offset Direction','Name','Distance','Direction','Sponsor','FM','CTCSS','DCS','Tone Mode','DMR','DMR CC','NXDN','NXDN RAN','P25','P25 NAC','D-STAR','YSF','TX Power','Operating Mode','AMS','Comment']
 
    # Chirp Repeater repeater_header
    chirprepeaterlist_header = ['Location','Name','Frequency','Duplex','Offset','Tone','rToneFreq','cToneFreq','DtcsCode','DtcsPolarity','Mode','TStep','Skip','Comment','URCALL','RPT1CALL','RPT2CALL','DVCODE']
@@ -498,12 +515,12 @@ def main(argv):
 
    # Process options
    try:
-       opts, args = getopt.getopt(argv,"hdc:s:r:b:f:po:z:kxq:",["debug=","city=","state=","radius=","bands=","filter=","chirp","outputfile=","search=","oneper","xnotes","dbfilter"])
+       opts, args = getopt.getopt(argv,"hdc:s:r:b:f:po:z:kxq:w:a:",["help","debug","city=","state=","radius=","bands=","filter=","chirp","outputfile=","search=","oneper","xnotes","dbfilter=","power=","amsmode="])
    except getopt.GetoptError:
       print("SYNTAX ERROR!")
       helpmessage(2)
    for opt, arg in opts:
-      if opt == '-h':
+      if opt in ("-h", "--help"):
           helpmessage(0)
       elif opt in ("-d", "--debug"):
             DEBUG = True
@@ -532,6 +549,12 @@ def main(argv):
          exnotes = True
       elif opt in ("-q", "--dbfilter"):
          dbfilter = arg
+      elif opt in ("-w", "--power"):
+         tx_power = arg
+      elif opt in ("-a", "--amsmode"):
+         ams_mode = arg
+      else:
+         helpmessage(2)
 
    if DEBUG == True:
       print ('City is "', city)
@@ -542,6 +565,8 @@ def main(argv):
       print ('Filter(s) is/are"', rfilter)
       print ('OnePer is "', numperfreq)
       print ('dbfilter is"', dbfilter)
+      print ('power"', tx_power)
+      print ('amsmode', ams_mode)
 
    # Create Webform Data
    if dbfilter == "neny":
@@ -639,7 +664,7 @@ def main(argv):
       rpters.pop(0)
 
    # Process Repeater Data
-   processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist, searchfilter, exnotes, DEBUG)
+   processrepeaterdata(rpters, repeater_list, rfilter, chirp, chirpcount, chirprepeater, chirprepeaterlist, searchfilter, exnotes, DEBUG, tx_power, ams_mode)
 
    # Print Repeaters
    if DEBUG == True:
