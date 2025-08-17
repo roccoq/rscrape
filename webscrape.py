@@ -19,7 +19,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 # Version info
-__version__ = "0.90.2"  # Formatting
+__version__ = "0.90.3"  # Type Checking and Pre-Commit checks
 
 
 def updatewebformdata(
