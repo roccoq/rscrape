@@ -18,7 +18,7 @@ from pprint import pprint
 import logging
 
 # Version info
-__version__ = "0.90"  # close to a solid release
+__version__ = "0.90.1"  # DEBUG bug fix
 
 
 def updatewebformdata(formdata, city, state, radius, bands, numperfreq, dbfilter):
@@ -1152,8 +1152,8 @@ def main(argv):
     )
 
     # Print Repeaters
-    if DEBUG == True:
-        logging.debug(*repeater_list, sep="\n")
+    #if DEBUG == True:
+        #logging.debug(*repeater_list, sep="\n")
 
     # Write repeater list to csv
     with open(outputfile, "w", encoding="UTF8", newline="") as f:
