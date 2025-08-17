@@ -5,23 +5,33 @@
 Fetches data from regional directories, processes modes/tones, outputs to CSV/CHIRP.
 """
 
-import sys
 import argparse
+import csv
+import logging
+import re
+import sys
+from io import StringIO
+from typing import Any
+
+import pandas as pd
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-import pandas as pd
-import re
-import csv
-from io import StringIO
-from pprint import pprint
-import logging
 
 # Version info
 __version__ = "0.90.2"  # Formatting
 
 
-def updatewebformdata(formdata, city, state, radius, bands, numperfreq, dbfilter):
+def updatewebformdata(
+    formdata: dict[str, str],
+    city: str,
+    state: str,
+    radius: str,
+    bands: str,
+    numperfreq: str,
+    dbfilter: str,
+) -> None:
+    # def updatewebformdata(formdata, city, state, radius, bands, numperfreq, dbfilter):
     """Update the web form data dictionary with search parameters.
 
     Args:
@@ -50,20 +60,34 @@ def updatewebformdata(formdata, city, state, radius, bands, numperfreq, dbfilter
     formdata.update(formupdate)
 
 
+# def processrepeaterdata(
+#    rpters,
+#    repeater_list,
+#    rfilter,
+#    chirp,
+#    chirpcount,
+#    chirprepeater,
+#    chirprepeaterlist,
+#    searchfilter,
+#    exnotes,
+#    DEBUG,
+#    tx_power,
+#    ams_mode,
+# ):
 def processrepeaterdata(
-    rpters,
-    repeater_list,
-    rfilter,
-    chirp,
-    chirpcount,
-    chirprepeater,
-    chirprepeaterlist,
-    searchfilter,
-    exnotes,
-    DEBUG,
-    tx_power,
-    ams_mode,
-):
+    rpters: list[list[Any]],
+    repeater_list: list[list[Any]],
+    rfilter: list[str],
+    chirp: bool,
+    chirpcount: int,
+    chirprepeater: list[Any],
+    chirprepeaterlist: list[list[Any]],
+    searchfilter: str,
+    exnotes: bool,
+    DEBUG: bool,
+    tx_power: str,
+    ams_mode: str,
+) -> None:
     """Process raw repeater data into formatted entries for output.
 
     Args:
@@ -241,8 +265,7 @@ def processrepeaterdata(
 
     # Iterate through repater list to write in preferred format
     for i in range(len(rpters)):
-
-        if DEBUG == True:
+        if DEBUG:
             logging.debug(rpters[i])
 
         # Initialize/clear variables
@@ -261,7 +284,7 @@ def processrepeaterdata(
         operating_mode = ""
         ams = "N"
 
-        # Seperate City, State and populate variables
+        # Separate City, State and populate variables
         if "nan" in str(rpters[i][0]):
             city = "EMPTY"
             state = "EMPTY"
@@ -280,8 +303,8 @@ def processrepeaterdata(
             freq = rpters[i][1]
 
         # Get offset and offset direction
-        offsetinfo = []
-        offsetinfo = determineoffset(freq)
+        # offsetinfo = []
+        offsetinfo: dict[str, float | str] = determineoffset(freq)
         offset = offsetinfo["offset"]
         offset_dir = offsetinfo["offset_dir"]
 
@@ -291,7 +314,7 @@ def processrepeaterdata(
         else:
             call = rpters[i][3]
 
-        # Seperate Distance and Direction and populate variables
+        # Separate Distance and Direction and populate variables
         distdir = re.search(r"([0-9]{1,3}.[0-9])([EWNS][EW]{0,1}|)", rpters[i][4])
         if distdir:
             dist = distdir.group(1)
@@ -357,7 +380,7 @@ def processrepeaterdata(
                 if code:
                     dmr_cc = code.group(0)
 
-            # Determine if P25 Capable and ser NAC
+            # Determine if P25 Capable and set NAC
             p25_match = re.search(r"(NAC\:|NAC)([0-9]{3,4}|)", notes)
 
             if p25_match:
@@ -435,11 +458,11 @@ def processrepeaterdata(
             fm_mode = "TRUE"
 
         # YSF Operating Mode
-        if fm_mode == "TRUE":
+        if fm_mode:
             operating_mode = "FM"
             ams = "N"
 
-        if ysf_mode == "TRUE":
+        if ysf_mode:
             if ams_mode == "v1":
                 operating_mode = "Auto"
                 ams = ""
@@ -448,7 +471,7 @@ def processrepeaterdata(
                 ams = "Y"
 
         # Extended Notes
-        if DEBUG == True:
+        if DEBUG:
             logging.debug(call)
         if notes != "EMPTY":
             ex_notes = city + "," + state + "," + call + "," + notes
@@ -459,7 +482,7 @@ def processrepeaterdata(
         repeater.append(state)
         repeater.append(freq)
         repeater.append(str(offset))
-        repeater.append(offset_dir)
+        repeater.append(str(offset_dir))
         repeater.append(call)
         repeater.append(dist)
         repeater.append(direct)
@@ -480,19 +503,21 @@ def processrepeaterdata(
         repeater.append(operating_mode)
         repeater.append(ams)
 
-        if exnotes == True:
+        if exnotes:
             repeater.append(ex_notes)
         else:
             repeater.append(notes)
 
-        # If chirp option is ture build chirp list
-        if chirp == True and fm_mode == "TRUE":
+        # If chirp option is true build chirp list
+        if chirp and fm_mode:
             chirprepeater = []
+            # chirprepeater: list[Any] = []
             chirprepeater.append(str(chirpcount))
             chirprepeater.append(call)
-            chirprepeater.append(freq)
+            # chirprepeater.append(freq)
+            chirprepeater.append(str(freq))
             chirprepeater.append(offset_dir)
-            chirprepeater.append("%.6f" % abs(float(offset)))
+            chirprepeater.append(f"{abs(float(offset)):.6f}")
             if dcs_code and not dcs_code.isspace():
                 chirprepeater.append("DTCS")
             else:
@@ -520,7 +545,7 @@ def processrepeaterdata(
             chirprepeater.append("")
 
         # Build Chirp list
-        if chirp == True and fm_mode == "TRUE":
+        if chirp and fm_mode:
             if searchfilter != "":
                 if any(searchfilter in s for s in chirprepeater):
                     chirpbuild(chirprepeater, chirprepeaterlist)
@@ -537,7 +562,8 @@ def processrepeaterdata(
             filteroutput(rfilter, repeater, repeater_list)
 
 
-def determineoffset(freq_string):
+# def determineoffset(freq_string):
+def determineoffset(freq_string: str) -> dict[str, float | str]:
     """Calculate repeater offset based on frequency.
 
     Args:
@@ -630,7 +656,10 @@ def determineoffset(freq_string):
     return {"offset": 0, "offset_dir": "off"}
 
 
-def filteroutput(rfilter, repeater, repeater_list):
+# def filteroutput(rfilter, repeater, repeater_list):
+def filteroutput(
+    rfilter: list[str], repeater: list[Any], repeater_list: list[list[Any]]
+) -> None:
     """Filter and append repeater entry based on mode filters.
 
     Args:
@@ -658,7 +687,8 @@ def filteroutput(rfilter, repeater, repeater_list):
         repeater_list.append(repeater)
 
 
-def chirpbuild(chirprepeater, chirprepeaterlist):
+# def chirpbuild(chirprepeater, chirprepeaterlist):
+def chirpbuild(chirprepeater: list[Any], chirprepeaterlist: list[list[Any]]) -> None:
     """Append a CHIRP-formatted repeater entry to the list.
 
     Args:
@@ -671,7 +701,8 @@ def chirpbuild(chirprepeater, chirprepeaterlist):
     chirprepeaterlist.append(chirprepeater)
 
 
-def main(argv):
+# def main(argv):
+def main(argv: list[str]) -> None:
     """Main entry point for the script, handling options and data processing.
 
     Args:
@@ -689,7 +720,6 @@ def main(argv):
     radius = "50"
     bands = "144,440"
     rfilter = ["all"]
-    rfilterlist = []
     outputfile = "repeaters.csv"
     searchfilter = ""
     numperfreq = ""
@@ -712,11 +742,8 @@ def main(argv):
     # Chirp Repeater list
     chirprepeaterlist = []
 
-    # Repeater Entry
-    repeater = []
-
     # Chirp Repeaters
-    chirprepeater = []
+    chirprepeater: list[str | float] = []
 
     # Repeater Header
     repeater_header = [
@@ -936,7 +963,7 @@ def main(argv):
 
     # Validate Radius
     try:
-        r = int(radius)
+        int(radius)
     except ValueError:
         logging.error("Radius must be numeric")
         sys.exit(1)
@@ -989,7 +1016,7 @@ def main(argv):
             sys.exit(1)
 
         # Print Table in Pandas Data Frame Format
-        if DEBUG == True:
+        if DEBUG:
             logging.debug("TABLES NEREP")
             logging.debug(tables_nerep)
             logging.debug("TABLES NYEP")
@@ -1003,13 +1030,13 @@ def main(argv):
         if len(tables_nerep) > 1:
             df_nerep = tables_nerep[1]
         else:
-            logging.error(f"Data changed, less tables")
+            logging.error("Data changed, less tables")
             sys.exit(1)
 
         if len(tables_nyrep) > 1:
             df_nyrep = tables_nyrep[1]
         else:
-            logging.error(f"Data changed, less tables")
+            logging.error("Data changed, less tables")
             sys.exit(1)
 
         # Dynamically set columns from first row and drop it
@@ -1060,7 +1087,7 @@ def main(argv):
             sys.exit(1)
 
         # Print Table in Pandas Data Frame Format
-        if DEBUG == True:
+        if DEBUG:
             logging.debug("TABLES NEREP")
             logging.debug(tables_nerep)
             logging.debug("TABLES NYEP")
@@ -1070,13 +1097,13 @@ def main(argv):
         if len(tables_nerep) > 1:
             df_nerep = tables_nerep[1]
         else:
-            logging.error(f"Data changed, less tables")
+            logging.error("Data changed, less tables")
             sys.exit(1)
 
         if len(tables_nyrep) > 1:
             df_nyrep = tables_nyrep[1]
         else:
-            logging.error(f"Data changed, less tables")
+            logging.error("Data changed, less tables")
             sys.exit(1)
 
         # Dynamically set columns from first row and drop it
@@ -1101,7 +1128,7 @@ def main(argv):
     else:
         updatewebformdata(formdata, city, state, radius, bands, numperfreq, dbfilter)
 
-        if DEBUG == True:
+        if DEBUG:
             logging.debug(formdata)
 
         # POST Form Request
@@ -1126,7 +1153,7 @@ def main(argv):
         if len(tables) > 1:
             df = tables[1]
         else:
-            logging.debug(f"Data changed, less tables")
+            logging.debug("Data changed, less tables")
             sys.exit(1)
 
         # Dynamically set columns from first row and drop it
@@ -1168,7 +1195,7 @@ def main(argv):
         writer.writerows(repeater_list)
 
     # Chirp Repeater list
-    if chirp == True:
+    if chirp:
         # Write chirp list to csv
         with open("CHIRP_" + outputfile, "w", encoding="UTF8", newline="") as g:
             writerchirp = csv.writer(g)

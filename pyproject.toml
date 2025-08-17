@@ -1,0 +1,119 @@
+[project]
+name = "rscrape"
+version = "0.1.0"
+description = "Scrape and normalize amateur radio repeater listings with export to CSV/CHIRP."
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+authors = [{ name = "Your Name", email = "you@example.com" }]
+
+dependencies = [
+  "requests>=2.32",
+  "beautifulsoup4>=4.12",
+  "lxml>=5.2",
+  "pandas>=2.2",
+  "urllib3>=2.2",
+]
+
+[project.optional-dependencies]
+cache = ["requests-cache>=1.2"]
+dev = [
+  "black==24.8.0",
+  "ruff==0.5.7",
+  "mypy==1.11.2",
+  "pytest>=8.2",
+  "pytest-cov>=5.0",
+  "requests-mock>=1.12",
+]
+
+[project.scripts]
+rscrape = "rscrape.cli:main"
+
+# ---------------------------
+# Black (formatter)
+# ---------------------------
+[tool.black]
+line-length = 88
+target-version = ["py313"]
+skip-string-normalization = false
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.mypy_cache
+  | \.ruff_cache
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+# ---------------------------
+# Ruff (linter + import sort)
+# ---------------------------
+[tool.ruff]
+target-version = "py313"
+
+# Keep line length consistent with Black
+line-length = 88
+
+# Lint rule sets:
+#  E/F = pycodestyle/pyflakes, I = import sorting (isort),
+#  B = bugbear, UP = pyupgrade, C4 = comprehensions
+lint.select = ["E", "F", "I", "B", "UP", "C4"]
+# Black handles line length; avoid double-reporting
+lint.ignore = ["E501"]
+
+# Per-file tweaks (e.g., allow longer test lines, disable assert-warning rules)
+lint.per-file-ignores = { "tests/**" = ["E402"] }
+
+# isort-style import sorting config (via Ruff)
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-single-line = false
+known-first-party = ["rscrape"]
+
+# If you keep Black as canonical formatter, you can omit ruff's formatter.
+# If you prefer Ruff-only formatting, remove Black and enable this:
+# [tool.ruff.format]
+# quote-style = "preserve"
+
+# ---------------------------
+# mypy (static typing)
+# ---------------------------
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+no_implicit_optional = true
+# If third-party packages lack type hints, keep this true and add stubs as needed
+ignore_missing_imports = true
+plugins = []
+
+# Optional: narrow checks to your package
+mypy_path = ["."]
+files = ["rscrape", "tests"]
+
+# ---------------------------
+# pytest
+# ---------------------------
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-q"
+testpaths = ["tests"]
+
+# ---------------------------
+# coverage.py (optional)
+# ---------------------------
+[tool.coverage.run]
+branch = true
+source = ["rscrape"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 80

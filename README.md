@@ -34,14 +34,14 @@ Optional:
                          chirp option works with FM analog repeaters ONLY
      -q --dbfilter   select which database to query the valid choices are :
                          nerep -> New England Repeater Directory
-                         nesmc -> New England Spectrum Managment Council
+                         nesmc -> New England Spectrum Management Council
                          csma  -> Connecticut Spectrum Management Association
                          nyrep -> New York Repeader Directory
-                         nesct -> New England Spectrum Managment Council and
+                         nesct -> New England Spectrum Management Council and
                                   Connecticut Spectrum Management Association combined
                          neny  -> New England and New York Repeater Directories combined (DEFAULT)
      -x --xnotes     print extended notes in comments field, does not apply to chirp output
-     -z --search     search each repeater entry for the indicated text and only print matches, case sensitive 
+     -z --search     search each repeater entry for the indicated text and only print matches, case sensitive
                          this feature is particularly useful when searching for linked networks using the notes,
                          callsign, sponsor, etc. *** Chirp output only contains a subset of data and results
                          will differ from the primary repeater csv data file
