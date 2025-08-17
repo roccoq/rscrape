@@ -8,11 +8,17 @@ Fetches data from regional directories, processes modes/tones, outputs to CSV/CH
 import sys
 import argparse
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import pandas as pd
 import re
 import csv
 from io import StringIO
 from pprint import pprint
+import logging
+
+# Version info
+__version__ = "0.90"  # close to a solid release
 
 
 def updatewebformdata(formdata, city, state, radius, bands, numperfreq, dbfilter):
@@ -237,7 +243,7 @@ def processrepeaterdata(
     for i in range(len(rpters)):
 
         if DEBUG == True:
-            print(rpters[i])
+            logging.debug(rpters[i])
 
         # Initialize/clear variables
         ysf_mode = ""
@@ -442,7 +448,7 @@ def processrepeaterdata(
 
         # Extended Notes
         if DEBUG == True:
-            print(call)
+            logging.debug(call)
         if notes != "EMPTY":
             ex_notes = city + "," + state + "," + call + "," + notes
 
@@ -546,7 +552,7 @@ def determineoffset(freq_string):
         freq = float(freq_string)
     except ValueError:
         # Handle the case where freq_string is not convertible to float
-        print(f"Error: '{freq_string}' is not a valid float string")
+        logging.error(f"Error: '{freq_string}' is not a valid float string")
         return {"offset": 0, "offset_dir": "off"}
 
     if freq >= 51 and freq <= 51.99:
@@ -891,6 +897,26 @@ def main(argv):
     tx_power = args.power
     ams_mode = args.amsmode
 
+    # Configure logging at the beginning -- NEW: Setup logging
+    logging.basicConfig(
+        filename='webscrape.log',  # Log to file
+        level=logging.DEBUG if DEBUG else logging.INFO,  # DEBUG level if --debug, else INFO
+        format='%(asctime)s - %(levelname)s - %(message)s'  # Timestamp - Level - Message
+    )
+
+    # Log debug info instead of print
+    if DEBUG:
+        logging.debug(f"City is {city}")
+        logging.debug(f"State is {state}")
+        logging.debug(f"Radius is {radius}")
+        logging.debug(f"Band(s) is/are {bands}")
+        logging.debug(f"Output file is {outputfile}")
+        logging.debug(f"Filter(s) is/are {rfilter}")
+        logging.debug(f"OnePer is {numperfreq}")
+        logging.debug(f"dbfilter is {dbfilter}")
+        logging.debug(f"power {tx_power}")
+        logging.debug(f"amsmode {ams_mode}")
+
     # Radius positive
     if args.radius <= 0:
         parser.error("Radius must be positive")
@@ -908,54 +934,61 @@ def main(argv):
     try:
         r = int(radius)
     except ValueError:
-        print("Radius must be numeric")
+        logging.error("Radius must be numeric")
         sys.exit(1)
 
     # Validate DB Filters
     valid_dbfilters = {"nerep", "nesmc", "csma", "nyrep", "nesct", "neny"}
     if dbfilter not in valid_dbfilters:
-        print("Invalid dbfilter")
+        logging.error("Invalid dbfilter")
         sys.exit(1)
 
     # Validate AMS Mode
     if ams_mode not in {"v1", "v2"}:
-        print("amsmode must be v1 or v2")
+        logging.error("amsmode must be v1 or v2")
         sys.exit(1)
+
+    # Create a session with retry logic -- NEW: Retries added here
+    session = requests.Session()
+    retry = Retry(connect=3, backoff_factor=0.5)  # 3 retries, exponential backoff
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
 
     # Create Webform Data
     if dbfilter == "neny":
         updatewebformdata(formdata, city, state, radius, bands, numperfreq, "nerep")
         try:
-            nerep_rptrs = requests.post(nesmc_url, data=formdata, timeout=10)
+            nerep_rptrs = session.post(nesmc_url, data=formdata, timeout=10)
         except Exception as e:
-            print(f"Error fetching data: {e}")
+            logging.error(f"Error fetching data: {e}")
             sys.exit(1)
         updatewebformdata(formdata, city, state, radius, bands, numperfreq, "nyrep")
         try:
-            nyrep_rptrs = requests.post(nesmc_url, data=formdata, timeout=10)
+            nyrep_rptrs = session.post(nesmc_url, data=formdata, timeout=10)
         except Exception as e:
-            print(f"Error fetching data: {e}")
+            logging.error(f"Error fetching data: {e}")
             sys.exit(1)
 
         # Read HTML response and parse table
         try:
             tables_nerep = pd.read_html(StringIO(nerep_rptrs.text))
         except Exception as e:
-            print(f"Error fetching data: {e}")
+            logging.error(f"Error fetching data: {e}")
             sys.exit(1)
 
         try:
             tables_nyrep = pd.read_html(StringIO(nyrep_rptrs.text))
         except Exception as e:
-            print(f"Error fetching data: {e}")
+            logging.error(f"Error fetching data: {e}")
             sys.exit(1)
 
         # Print Table in Pandas Data Frame Format
         if DEBUG == True:
-            print("TABLES NEREP")
-            print(tables_nerep)
-            print("TABLES NYEP")
-            print(tables_nyrep)
+            logging.debug("TABLES NEREP")
+            logging.debug(tables_nerep)
+            logging.debug("TABLES NYEP")
+            logging.debug(tables_nyrep)
 
         # Select 4th Table as its sorted by distance... to be selectable in the future
 
@@ -965,13 +998,13 @@ def main(argv):
         if len(tables_nerep) > 1:
             df_nerep = tables_nerep[1]
         else:
-            print(f"Data changed, less tables")
+            logging.error(f"Data changed, less tables")
             sys.exit(1)
 
         if len(tables_nyrep) > 1:
             df_nyrep = tables_nyrep[1]
         else:
-            print(f"Data changed, less tables")
+            logging.error(f"Data changed, less tables")
             sys.exit(1)
 
         # Dynamically set columns from first row and drop it
@@ -997,48 +1030,48 @@ def main(argv):
     elif dbfilter == "nesct":
         updatewebformdata(formdata, city, state, radius, bands, numperfreq, "nesmc")
         try:
-            nerep_rptrs = requests.post(nesmc_url, data=formdata, timeout=10)
+            nerep_rptrs = session.post(nesmc_url, data=formdata, timeout=10)
         except Exception as e:
-            print(f"Error fetching data: {e}")
+            logging.error(f"Error fetching data: {e}")
             sys.exit(1)
         updatewebformdata(formdata, city, state, radius, bands, numperfreq, "csma")
         try:
-            nyrep_rptrs = requests.post(nesmc_url, data=formdata, timeout=10)
+            nyrep_rptrs = session.post(nesmc_url, data=formdata, timeout=10)
         except Exception as e:
-            print(f"Error fetching data: {e}")
+            logging.error(f"Error fetching data: {e}")
             sys.exit(1)
 
         # Read HTML response and parse table
         try:
             tables_nerep = pd.read_html(StringIO(nerep_rptrs.text))
         except Exception as e:
-            print(f"Error fetching data: {e}")
+            logging.error(f"Error fetching data: {e}")
             sys.exit(1)
 
         try:
             tables_nyrep = pd.read_html(StringIO(nyrep_rptrs.text))
         except Exception as e:
-            print(f"Error fetching data: {e}")
+            logging.error(f"Error fetching data: {e}")
             sys.exit(1)
 
         # Print Table in Pandas Data Frame Format
         if DEBUG == True:
-            print("TABLES NEREP")
-            print(tables_nerep)
-            print("TABLES NYEP")
-            print(tables_nyrep)
+            logging.debug("TABLES NEREP")
+            logging.debug(tables_nerep)
+            logging.debug("TABLES NYEP")
+            logging.debug(tables_nyrep)
 
         # Select table as its sorted by distance... to be selectable in the future
         if len(tables_nerep) > 1:
             df_nerep = tables_nerep[1]
         else:
-            print(f"Data changed, less tables")
+            logging.error(f"Data changed, less tables")
             sys.exit(1)
 
         if len(tables_nyrep) > 1:
             df_nyrep = tables_nyrep[1]
         else:
-            print(f"Data changed, less tables")
+            logging.error(f"Data changed, less tables")
             sys.exit(1)
 
         # Dynamically set columns from first row and drop it
@@ -1064,31 +1097,31 @@ def main(argv):
         updatewebformdata(formdata, city, state, radius, bands, numperfreq, dbfilter)
 
         if DEBUG == True:
-            print(formdata)
+            logging.debug(formdata)
 
         # POST Form Request
         try:
-            nesmc_rptrs = requests.post(nesmc_url, data=formdata, timeout=10)
+            nesmc_rptrs = session.post(nesmc_url, data=formdata, timeout=10)
         except Exception as e:
-            print(f"Error fetching data: {e}")
+            logging.error(f"Error fetching data: {e}")
             sys.exit(1)
 
         # Read HTML response and parse table
         try:
             tables = pd.read_html(StringIO(nesmc_rptrs.text))
         except Exception as e:
-            print(f"Error fetching data: {e}")
+            logging.error(f"Error fetching data: {e}")
             sys.exit(1)
 
         # Print Table in Pandas Data Frame Format
         if DEBUG and tables:
-            print(tables)
+            logging.debug(tables)
 
         # Select table as its sorted by distance... to be selectable in the future
         if len(tables) > 1:
             df = tables[1]
         else:
-            print(f"Data changed, less tables")
+            logging.debug(f"Data changed, less tables")
             sys.exit(1)
 
         # Dynamically set columns from first row and drop it
@@ -1120,7 +1153,7 @@ def main(argv):
 
     # Print Repeaters
     if DEBUG == True:
-        print(*repeater_list, sep="\n")
+        logging.debug(*repeater_list, sep="\n")
 
     # Write repeater list to csv
     with open(outputfile, "w", encoding="UTF8", newline="") as f:

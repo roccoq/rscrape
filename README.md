@@ -26,7 +26,7 @@ Optional:
                          if not outputfile is selected writes to repeaters.csv
      -f --filter     filter output based on the type of repeater desired
                          valid modes are fm ysf dmr dstar nxdn p25
-                         i.e. -f ysf,dmr i.e. nxdn,p2f,dstar, etc
+                         i.e. -f ysf,dmr i.e. nxdn,p25,dstar, etc
                          if no filter is selected the default is to print all repeaters in radius
      -k --oneper     only output closest repeater per a given frequency
      -p --chirp      prints an additional csv file that is CHIRP format The CHIRP file has
