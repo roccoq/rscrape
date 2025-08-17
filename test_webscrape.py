@@ -162,7 +162,7 @@ class TestWebscrape(unittest.TestCase):
         chirp_entry = chirprepeaterlist[0]
         self.assertEqual(chirp_entry[0], "0")  # Location
         self.assertEqual(chirp_entry[1], "CALL")  # Name
-        self.assertEqual(chirp_entry[2], 145.0)  # Frequency
+        self.assertEqual(chirp_entry[2], "145.0")  # Frequency
         self.assertEqual(chirp_entry[5], "Tone")  # Tone
         self.assertEqual(chirp_entry[6], "100.0")  # rToneFreq
 
