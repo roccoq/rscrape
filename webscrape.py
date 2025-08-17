@@ -18,7 +18,7 @@ from pprint import pprint
 import logging
 
 # Version info
-__version__ = "0.90.1"  # DEBUG bug fix
+__version__ = "0.90.2"  # Formatting
 
 
 def updatewebformdata(formdata, city, state, radius, bands, numperfreq, dbfilter):
@@ -337,7 +337,7 @@ def processrepeaterdata(
                 ysf_mode = "TRUE"
 
             # Determine if D-STAR Capable
-            dstar_match = re.search('d-star', notes, re.IGNORECASE)
+            dstar_match = re.search("d-star", notes, re.IGNORECASE)
             if dstar_match:
                 dstar_mode = "TRUE"
 
@@ -416,7 +416,8 @@ def processrepeaterdata(
                     r"D([0-9]{3})", notes, re.IGNORECASE
                 )  # Fixed to [0-9]{3}, added IGNORECASE
                 if code:
-                    captured = code.group(1)  # Already 3 digits, no padding needed
+                    # Already 3 digits, no padding needed
+                    captured = code.group(1)
                     if captured in valid_dcs:
                         dcs_code = captured
                         fm_tone_mode = "DCS"
@@ -899,9 +900,12 @@ def main(argv):
 
     # Configure logging at the beginning -- NEW: Setup logging
     logging.basicConfig(
-        filename='webscrape.log',  # Log to file
-        level=logging.DEBUG if DEBUG else logging.INFO,  # DEBUG level if --debug, else INFO
-        format='%(asctime)s - %(levelname)s - %(message)s'  # Timestamp - Level - Message
+        filename="webscrape.log",  # Log to file
+        level=(
+            logging.DEBUG if DEBUG else logging.INFO
+        ),  # DEBUG level if --debug, else INFO
+        # Timestamp - Level - Message
+        format="%(asctime)s - %(levelname)s - %(message)s",
     )
 
     # Log debug info instead of print
@@ -950,10 +954,11 @@ def main(argv):
 
     # Create a session with retry logic -- NEW: Retries added here
     session = requests.Session()
-    retry = Retry(connect=3, backoff_factor=0.5)  # 3 retries, exponential backoff
+    # 3 retries, exponential backoff
+    retry = Retry(connect=3, backoff_factor=0.5)
     adapter = HTTPAdapter(max_retries=retry)
-    session.mount('http://', adapter)
-    session.mount('https://', adapter)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
 
     # Create Webform Data
     if dbfilter == "neny":
@@ -1152,8 +1157,8 @@ def main(argv):
     )
 
     # Print Repeaters
-    #if DEBUG == True:
-        #logging.debug(*repeater_list, sep="\n")
+    # if DEBUG == True:
+    # logging.debug(*repeater_list, sep="\n")
 
     # Write repeater list to csv
     with open(outputfile, "w", encoding="UTF8", newline="") as f:
