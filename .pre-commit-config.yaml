@@ -1,0 +1,49 @@
+# Run:  pipx install pre-commit   # or: pip install pre-commit
+# Then: pre-commit install
+# Update hooks later with: pre-commit autoupdate
+
+repos:
+  # Basic hygiene: whitespace, EOF newline, mixed line endings, YAML validity
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # Spelling pass for obvious typos in code/comments/README
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.0
+    hooks:
+      - id: codespell
+        args:
+          - --ignore-words-list=teh,nd  # tweak as needed
+          - --skip=*.lock,*.json        # example skips; adjust to your repo
+
+  # Ruff = linter + import sorter (isort built-in). Keep Black as the formatter.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.7
+    hooks:
+      - id: ruff
+        #args: [--fix]   # auto-fix where safe
+      - id: ruff-format
+        # If you prefer Black as the only formatter, remove this hook.
+        # (Below we keep Black as the canonical formatter.)
+
+  # Black = canonical formatter (keeps line length @ 88)
+  - repo: https://github.com/psf/black
+    rev: 24.8.0
+    hooks:
+      - id: black
+
+  # mypy = static type checker (strict mode configured in pyproject)
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          # Ensure stubs exist for common libs if you use them
+          - types-requests
+          - types-python-dateutil
