@@ -2,7 +2,22 @@
 
 """Web scraping tool for amateur radio repeaters.
 
-Fetches data from regional directories, processes modes/tones, outputs to CSV/CHIRP.
+This module provides functionality to scrape amateur radio repeater information
+from various regional databases including:
+- New England Repeater Directory
+- New England Spectrum Management Council  
+- Connecticut Spectrum Management Association
+- New York Repeater Directory
+
+Features:
+- Search by location and radius
+- Filter by frequency bands and modes (FM, YSF, DMR, D-STAR, NXDN, P25)
+- Export to standard CSV and CHIRP-compatible formats
+- Support for tone/offset calculations
+- Extended notes and search filtering
+
+Example:
+    python3 webscrape.py -c Boston -s MA -r 25 -b 144,440 -f ysf,dmr
 """
 
 import argparse
@@ -703,13 +718,17 @@ def chirpbuild(chirprepeater: list[Any], chirprepeaterlist: list[list[Any]]) -> 
 
 # def main(argv):
 def main(argv: list[str]) -> None:
-    """Main entry point for the script, handling options and data processing.
+    """Main entry point for the amateur radio repeater scraper.
+    
+    Parses command-line arguments, fetches repeater data from various databases,
+    processes the data according to filters, and outputs results to CSV files.
+    Optionally generates CHIRP-compatible format for radio programming.
 
     Args:
-     argv (list): Command-line arguments.
+        argv (list[str]): Command-line arguments (excluding script name).
 
-     Returns:
-         None: Processes data and writes output files.
+    Returns:
+        None: Processes data and writes output files.
     """
 
     DEBUG = False
